@@ -196,7 +196,7 @@ function App() {
           >
             <Sparkles className="w-4 h-4 text-indigo-400" />
             <span className="text-indigo-400 text-sm font-bold">NOT BACKED BY YC</span>
-            <span className="text-slate-400 text-sm">But still fire</span>
+            {/* <span className="text-slate-400 text-sm">But still fire</span> */}
           </motion.div>
 
           <motion.div
