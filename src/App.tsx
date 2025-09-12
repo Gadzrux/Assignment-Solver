@@ -1,6 +1,15 @@
-import React, { useState } from 'react';
-import { PenTool, Download, RefreshCw, Loader2, Sparkles, Zap } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState } from "react";
+import {
+  PenTool,
+  Download,
+  RefreshCw,
+  Loader2,
+  Sparkles,
+  Zap,
+  Plus,
+  Trash2,
+} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface FormData {
   geminiApiKey: string;
@@ -9,132 +18,177 @@ interface FormData {
   universityRoll: string;
   subjectName: string;
   subjectCode: string;
-  otherDetails: string;
-  questionTopic: string;
+  topics: string[];
+  handwritingId: number;
 }
 
 function App() {
   const [formData, setFormData] = useState<FormData>({
-    name: '',
-    classRoll: '',
-    universityRoll: '',
-    subjectName: '',
-    subjectCode: '',
-    otherDetails: '',
-    questionTopic: '',
-    geminiApiKey: import.meta.env.VITE_GEMINI_API_KEY || ''
+    name: "",
+    classRoll: "",
+    universityRoll: "",
+    subjectName: "",
+    subjectCode: "",
+    topics: [""],
+    handwritingId: 1,
+    geminiApiKey: import.meta.env.VITE_GEMINI_API_KEY || "",
   });
 
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
+  const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(
+    null
+  );
   const [error, setError] = useState<string | null>(null);
   const [isPdfContent, setIsPdfContent] = useState(false);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: name === "handwritingId" ? parseInt(value) : value,
     }));
   };
 
+  const handleTopicChange = (index: number, value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      topics: prev.topics.map((topic, i) => (i === index ? value : topic)),
+    }));
+  };
+
+  const addTopic = () => {
+    setFormData((prev) => ({
+      ...prev,
+      topics: [...prev.topics, ""],
+    }));
+  };
+
+  const removeTopic = (index: number) => {
+    if (formData.topics.length > 1) {
+      setFormData((prev) => ({
+        ...prev,
+        topics: prev.topics.filter((_, i) => i !== index),
+      }));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setIsGenerating(true);
-  setError(null);
-  setGeneratedImageUrl(null);
-  setIsPdfContent(false);
+    e.preventDefault();
+    setIsGenerating(true);
+    setError(null);
+    setGeneratedImageUrl(null);
+    setIsPdfContent(false);
 
-  try {
-    const requestBody: any = {
-      name: formData.name,
-      class_roll: formData.classRoll,
-      university_roll: formData.universityRoll,
-      subject_name: formData.subjectName,
-      subject_code: formData.subjectCode,
-      question_topic: formData.questionTopic,
-      output_filename: `${formData.universityRoll}_${formData.subjectCode.replace(/\s+/g, '')}`,
-      gemini_api_key: formData.geminiApiKey || ''
-    };
-
-    if (formData.otherDetails.trim()) {
-      requestBody.other_details = formData.otherDetails;
+    // Validate topics
+    const validTopics = formData.topics.filter((topic) => topic.trim() !== "");
+    if (validTopics.length === 0) {
+      setError("At least one topic/question is required.");
+      setIsGenerating(false);
+      return;
     }
 
-    const response = await fetch(import.meta.env.VITE_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody),
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    // Validate handwriting ID
+    if (formData.handwritingId < 1 || formData.handwritingId > 6) {
+      setError("Handwriting ID must be between 1 and 6.");
+      setIsGenerating(false);
+      return;
     }
 
-    const contentType = response.headers.get('content-type');
-    console.log('Response content-type:', contentType); // Debug log
+    try {
+      const requestBody = {
+        name: formData.name,
+        class_roll: formData.classRoll,
+        university_roll: formData.universityRoll,
+        subject_name: formData.subjectName,
+        subject_code: formData.subjectCode,
+        topics: validTopics,
+        output_filename: `${
+          formData.universityRoll
+        }_${formData.subjectCode.replace(/\s+/g, "")}`,
+        gemini_api_key: formData.geminiApiKey || "",
+        handwriting_id: formData.handwritingId,
+      };
 
-    if (contentType && contentType.includes('application/pdf')) {
-      // Handle PDF response
-      const blob = await response.blob();
-      const pdfUrl = URL.createObjectURL(blob);
-      console.log('Created PDF blob URL:', pdfUrl); // Debug log
-      setGeneratedImageUrl(pdfUrl);
-      setIsPdfContent(true); // Mark as PDF
-    } else {
-      // Handle JSON response with image/PDF data
-      const result = await response.json();
-      console.log('API response:', result); // Debug log
+      const response = await fetch(import.meta.env.VITE_API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+      });
 
-      if (result.pdf_url || result.pdf_data || result.output_path) {
-        let pdfUrl;
-        
-        if (result.pdf_data) {
-          // Handle base64 PDF data
-          pdfUrl = `data:application/pdf;base64,${result.pdf_data}`;
-          setIsPdfContent(true);
-        } else if (result.pdf_url) {
-          pdfUrl = result.pdf_url;
-          setIsPdfContent(true);
-        } else if (result.output_path) {
-          // If output_path is returned, it's likely a PDF file path
-          pdfUrl = result.output_path;
-          setIsPdfContent(true);
-        }
-        
-        console.log('Setting PDF URL:', pdfUrl); // Debug log
-        setGeneratedImageUrl(pdfUrl);
-      } else if (result.image_url || result.image_data) {
-        // Fallback for image responses
-        const imageUrl = result.image_url ||
-          (result.image_data ? `data:image/png;base64,${result.image_data}` : null);
-        setGeneratedImageUrl(imageUrl);
-        setIsPdfContent(false);
-      } else {
-        throw new Error('No PDF or image data received from API');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-    }
 
-  } catch (err) {
-    console.error('Error generating assignment:', err);
-    setError('Failed to generate assignment. Please try again.');
-  } finally {
-    setIsGenerating(false);
-  }
-};
+      const contentType = response.headers.get("content-type");
+      console.log("Response content-type:", contentType); // Debug log
+
+      if (contentType && contentType.includes("application/pdf")) {
+        // Handle PDF response
+        const blob = await response.blob();
+        const pdfUrl = URL.createObjectURL(blob);
+        console.log("Created PDF blob URL:", pdfUrl); // Debug log
+        setGeneratedImageUrl(pdfUrl);
+        setIsPdfContent(true); // Mark as PDF
+      } else {
+        // Handle JSON response with image/PDF data
+        const result = await response.json();
+        console.log("API response:", result); // Debug log
+
+        if (result.pdf_url || result.pdf_data || result.output_path) {
+          let pdfUrl;
+
+          if (result.pdf_data) {
+            // Handle base64 PDF data
+            pdfUrl = `data:application/pdf;base64,${result.pdf_data}`;
+            setIsPdfContent(true);
+          } else if (result.pdf_url) {
+            pdfUrl = result.pdf_url;
+            setIsPdfContent(true);
+          } else if (result.output_path) {
+            // If output_path is returned, it's likely a PDF file path
+            pdfUrl = result.output_path;
+            setIsPdfContent(true);
+          }
+
+          console.log("Setting PDF URL:", pdfUrl); // Debug log
+          setGeneratedImageUrl(pdfUrl);
+        } else if (result.image_url || result.image_data) {
+          // Fallback for image responses
+          const imageUrl =
+            result.image_url ||
+            (result.image_data
+              ? `data:image/png;base64,${result.image_data}`
+              : null);
+          setGeneratedImageUrl(imageUrl);
+          setIsPdfContent(false);
+        } else {
+          throw new Error("No PDF or image data received from API");
+        }
+      }
+    } catch (err) {
+      console.error("Error generating assignment:", err);
+      setError("Failed to generate assignment. Please try again.");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const resetForm = () => {
     setFormData({
-      name: '',
-      classRoll: '',
-      universityRoll: '',
-      subjectName: '',
-      subjectCode: '',
-      otherDetails: '',
-      questionTopic: '',
-      geminiApiKey: import.meta.env.VITE_GEMINI_API_KEY || ''
+      name: "",
+      classRoll: "",
+      universityRoll: "",
+      subjectName: "",
+      subjectCode: "",
+      topics: [""],
+      handwritingId: 1,
+      geminiApiKey: import.meta.env.VITE_GEMINI_API_KEY || "",
     });
     setGeneratedImageUrl(null);
     setError(null);
@@ -143,13 +197,16 @@ function App() {
 
   const downloadImage = () => {
     if (generatedImageUrl) {
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = generatedImageUrl;
 
       // Use the isPdfContent state instead of URL detection
-      const extension = isPdfContent ? 'pdf' : 'png';
-      const fileName = `${formData.name.replace(/\s+/g, '_')}_${formData.questionTopic.replace(/\s+/g, '_')}_assignment.${extension}`;
-      
+      const extension = isPdfContent ? "pdf" : "png";
+      const fileName = `${formData.name.replace(
+        /\s+/g,
+        "_"
+      )}_${formData.topics[0]?.replace(/\s+/g, "_")}_assignment.${extension}`;
+
       link.download = fileName;
       document.body.appendChild(link);
       link.click();
@@ -182,8 +239,10 @@ function App() {
             <h1 className="text-3xl sm:text-5xl md:text-7xl font-black text-white tracking-tight mb-2">
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-cyan-400 to-violet-400">
                 F*ck
-              </span>{' '}
-              <span className="text-slate-300 block sm:inline">Handwritten Assignments</span>
+              </span>{" "}
+              <span className="text-slate-300 block sm:inline">
+                Handwritten Assignments
+              </span>
             </h1>
           </motion.div>
 
@@ -192,10 +251,16 @@ function App() {
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.3, duration: 0.6 }}
-            className="inline-flex items-center gap-2 sm:gap-3 bg-slate-900/60 backdrop-blur-sm border border-slate-600/50 rounded-full px-4 py-2 sm:px-6 sm:py-3 mb-6 sm:mb-8 shadow-lg"
+            className="inline-flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 mb-6 sm:mb-8 shadow-lg"
           >
-            <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-indigo-400" />
-            <span className="text-indigo-400 text-xs sm:text-sm font-bold">NOT BACKED BY YC</span>
+            <span className="text-slate-300 font-bold text-xs sm:text-sm">
+              Not backed by
+            </span>
+            <img
+              src="/src/assets/y-combinator-seeklogo.svg"
+              alt="Y Combinator"
+              className="h-4 sm:h-5 w-auto"
+            />
           </motion.div>
 
           <motion.div
@@ -205,10 +270,16 @@ function App() {
             className="max-w-5xl mx-auto space-y-4 sm:space-y-6 px-2"
           >
             <p className="text-lg sm:text-2xl md:text-3xl text-white font-bold leading-relaxed">
-              Transform your typed text into <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-indigo-400 font-black">realistic handwritten documents</span> instantly!
+              Transform your typed text into{" "}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-indigo-400 font-black">
+                realistic handwritten documents
+              </span>{" "}
+              instantly!
             </p>
             <p className="text-base sm:text-xl text-slate-400 leading-relaxed max-w-4xl mx-auto px-4">
-              Perfect for university assignments cuz who tf wants to write by hand. Generate authentic-looking handwritten assignments with pencil margins, paper texture, and natural writing variations.
+              Perfect for university assignments cuz who tf wants to write by
+              hand. Generate authentic-looking handwritten assignments with
+              pencil margins, paper texture, and natural writing variations.
             </p>
           </motion.div>
 
@@ -249,7 +320,9 @@ function App() {
                 <PenTool className="w-6 h-6 sm:w-8 sm:h-8 text-indigo-400" />
                 Assignment Details
               </h2>
-              <p className="text-slate-400 text-base sm:text-lg">Fill in your information below</p>
+              <p className="text-slate-400 text-base sm:text-lg">
+                Fill in your information below
+              </p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
@@ -354,46 +427,88 @@ function App() {
                     />
                   </div>
                 </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-slate-300 mb-2 sm:mb-3">
+                    Handwriting Style
+                  </label>
+                  <select
+                    name="handwritingId"
+                    value={formData.handwritingId}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 sm:px-5 sm:py-4 bg-slate-800/50 backdrop-blur-sm border border-slate-600/50 rounded-xl sm:rounded-2xl text-white focus:border-cyan-400/60 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 transition-all text-sm sm:text-base"
+                    required
+                  >
+                    <option value={1}>Style 1</option>
+                    <option value={2}>Style 2</option>
+                    <option value={3}>Style 3</option>
+                    <option value={4}>Style 4</option>
+                    <option value={5}>Style 5</option>
+                    <option value={6}>Style 6</option>
+                  </select>
+                </div>
               </motion.div>
 
-              {/* Assignment Details */}
+              {/* Topics/Questions */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.6, duration: 0.6 }}
                 className="space-y-4 sm:space-y-6"
               >
-                <h3 className="text-base sm:text-lg font-bold text-violet-300 uppercase tracking-wider">
-                  Assignment Content
-                </h3>
-
-                <div>
-                  <label className="block text-sm font-semibold text-slate-300 mb-2 sm:mb-3">
-                    Topic/Question
-                  </label>
-                  <textarea
-                    rows={3}
-                    name="questionTopic"
-                    value={formData.questionTopic}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 sm:px-5 sm:py-4 bg-slate-800/50 backdrop-blur-sm border border-slate-600/50 rounded-xl sm:rounded-2xl text-white placeholder-slate-500 focus:border-violet-400/60 focus:outline-none focus:ring-2 focus:ring-violet-400/20 transition-all text-sm sm:text-base"
-                    placeholder="What's this assignment about?"
-                    required
-                  />
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base sm:text-lg font-bold text-violet-300 uppercase tracking-wider">
+                    Topics/Questions
+                  </h3>
+                  <motion.button
+                    type="button"
+                    onClick={addTopic}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="flex items-center gap-2 px-3 py-2 bg-violet-600/20 border border-violet-500/30 text-violet-300 rounded-lg text-sm font-semibold hover:bg-violet-600/30 transition-all"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Topic
+                  </motion.button>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-slate-300 mb-2 sm:mb-3">
-                    Additional Details <span className="text-slate-500 font-normal">(optional)</span>
-                  </label>
-                  <textarea
-                    name="otherDetails"
-                    value={formData.otherDetails}
-                    onChange={handleInputChange}
-                    rows={3}
-                    className="w-full px-4 py-3 sm:px-5 sm:py-4 bg-slate-800/50 backdrop-blur-sm border border-slate-600/50 rounded-xl sm:rounded-2xl text-white placeholder-slate-500 focus:border-violet-400/60 focus:outline-none focus:ring-2 focus:ring-violet-400/20 transition-all resize-none text-sm sm:text-base"
-                    placeholder="Date, teacher name, special instructions, etc."
-                  />
+                <div className="space-y-4">
+                  {formData.topics.map((topic, index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                      className="flex gap-2 sm:gap-3"
+                    >
+                      <div className="flex-1">
+                        <label className="block text-sm font-semibold text-slate-300 mb-2">
+                          Topic/Question {index + 1}
+                        </label>
+                        <textarea
+                          rows={2}
+                          value={topic}
+                          onChange={(e) =>
+                            handleTopicChange(index, e.target.value)
+                          }
+                          className="w-full px-4 py-3 sm:px-5 sm:py-4 bg-slate-800/50 backdrop-blur-sm border border-slate-600/50 rounded-xl sm:rounded-2xl text-white placeholder-slate-500 focus:border-violet-400/60 focus:outline-none focus:ring-2 focus:ring-violet-400/20 transition-all text-sm sm:text-base resize-none"
+                          placeholder={`Enter topic/question ${index + 1}`}
+                          required={index === 0}
+                        />
+                      </div>
+                      {formData.topics.length > 1 && (
+                        <motion.button
+                          type="button"
+                          onClick={() => removeTopic(index)}
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          className="mt-8 p-2 bg-red-600/20 border border-red-500/30 text-red-300 rounded-lg hover:bg-red-600/30 transition-all"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </motion.button>
+                      )}
+                    </motion.div>
+                  ))}
                 </div>
               </motion.div>
 
@@ -406,7 +521,9 @@ function App() {
                     exit={{ opacity: 0, scale: 0.95, y: -10 }}
                     className="bg-red-900/30 backdrop-blur-sm border border-red-500/30 text-red-300 px-4 py-3 sm:px-6 sm:py-4 rounded-xl sm:rounded-2xl"
                   >
-                    <p className="font-semibold text-sm sm:text-base">Error: {error}</p>
+                    <p className="font-semibold text-sm sm:text-base">
+                      Error: {error}
+                    </p>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -451,7 +568,7 @@ function App() {
             </form>
           </motion.div>
 
-          {/* Result Section */}
+          {/* Result Section - keeping the same as before */}
           <motion.div
             initial={{ opacity: 0, x: 50 }}
             animate={{ opacity: 1, x: 0 }}
@@ -459,8 +576,12 @@ function App() {
             className="bg-slate-900/40 backdrop-blur-sm border border-slate-700/50 rounded-2xl sm:rounded-3xl p-6 sm:p-10 shadow-2xl"
           >
             <div className="mb-6 sm:mb-8">
-              <h2 className="text-2xl sm:text-3xl font-black text-white mb-2 sm:mb-3">Generated Assignment</h2>
-              <p className="text-slate-400 text-base sm:text-lg">Your handwritten document will appear here</p>
+              <h2 className="text-2xl sm:text-3xl font-black text-white mb-2 sm:mb-3">
+                Generated Assignment
+              </h2>
+              <p className="text-slate-400 text-base sm:text-lg">
+                Your handwritten document will appear here
+              </p>
             </div>
 
             <AnimatePresence mode="wait">
@@ -474,19 +595,22 @@ function App() {
                   <motion.div
                     animate={{
                       y: [0, -10, 0],
-                      opacity: [0.3, 0.6, 0.3]
+                      opacity: [0.3, 0.6, 0.3],
                     }}
                     transition={{
                       duration: 3,
                       repeat: Infinity,
-                      ease: "easeInOut"
+                      ease: "easeInOut",
                     }}
                   >
                     <PenTool className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-6 sm:mb-8 text-slate-600" />
                   </motion.div>
-                  <p className="text-xl sm:text-2xl font-bold text-slate-300 mb-3 sm:mb-4">Ready to create magic?</p>
+                  <p className="text-xl sm:text-2xl font-bold text-slate-300 mb-3 sm:mb-4">
+                    Ready to create magic?
+                  </p>
                   <p className="text-base sm:text-lg text-slate-400 max-w-sm mx-auto leading-relaxed px-4">
-                    Fill out the form and click generate to get your handwritten assignment
+                    Fill out the form and click generate to get your handwritten
+                    assignment
                   </p>
                 </motion.div>
               )}
@@ -501,12 +625,20 @@ function App() {
                   <div className="relative mx-auto mb-6 sm:mb-8 w-20 h-20 sm:w-24 sm:h-24">
                     <motion.div
                       animate={{ rotate: 360 }}
-                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                      transition={{
+                        duration: 1,
+                        repeat: Infinity,
+                        ease: "linear",
+                      }}
                       className="w-20 h-20 sm:w-24 sm:h-24 border-4 border-slate-700 border-t-indigo-400 rounded-full"
                     />
                     <motion.div
                       animate={{ rotate: -360 }}
-                      transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                      transition={{
+                        duration: 1.5,
+                        repeat: Infinity,
+                        ease: "linear",
+                      }}
                       className="absolute inset-0 w-20 h-20 sm:w-24 sm:h-24 border-4 border-transparent border-r-cyan-400 rounded-full"
                     />
                   </div>
@@ -517,7 +649,9 @@ function App() {
                   >
                     AI is crafting your assignment...
                   </motion.p>
-                  <p className="text-slate-400 text-base sm:text-lg px-4">This usually takes 10-30 seconds</p>
+                  <p className="text-slate-400 text-base sm:text-lg px-4">
+                    This usually takes 10-30 seconds
+                  </p>
                 </motion.div>
               )}
 
@@ -564,7 +698,7 @@ function App() {
                       className="w-full sm:flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-4 px-6 sm:py-5 sm:px-8 rounded-xl sm:rounded-2xl transition-all shadow-lg text-base sm:text-lg flex items-center justify-center gap-2 sm:gap-3 backdrop-blur-sm cursor-pointer"
                     >
                       <Download className="w-5 h-5 sm:w-6 sm:h-6" />
-                      Download {isPdfContent ? 'PDF' : 'Assignment'}
+                      Download {isPdfContent ? "PDF" : "Assignment"}
                     </motion.button>
 
                     <motion.button
@@ -593,8 +727,9 @@ function App() {
             Built for lazy students by lazy students
           </p>
           <p className="text-sm text-slate-500 max-w-2xl mx-auto leading-relaxed">
-            This tool generates realistic handwritten assignments for educational purposes.
-            Use responsibly and don't get caught lmao (we're not responsible if you do).
+            This tool generates realistic handwritten assignments for
+            educational purposes. Use responsibly and don't get caught lmao
+            (we're not responsible if you do).
           </p>
         </motion.div>
       </div>
