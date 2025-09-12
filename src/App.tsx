@@ -462,24 +462,46 @@ function App() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-300 mb-2 sm:mb-3">
+                  <label className="block text-sm font-semibold text-slate-300 mb-1 sm:mb-2">
                     Handwriting Style
                   </label>
+                  <div className="relative">
                   <select
                     name="handwritingId"
                     value={formData.handwritingId}
                     onChange={handleInputChange}
                     title="Select handwriting style"
-                    className="w-full px-4 py-3 sm:px-5 sm:py-4 bg-slate-800/50 backdrop-blur-sm border border-slate-600/50 rounded-xl sm:rounded-2xl text-white focus:border-cyan-400/60 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 transition-all text-sm sm:text-base cursor-pointer"
+                    className="w-full px-4 py-3 sm:px-5 sm:py-4 pr-12 sm:pr-14 bg-slate-800/50 backdrop-blur-sm border border-slate-600/50 rounded-xl sm:rounded-2xl text-white focus:border-cyan-400/60 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 transition-all text-sm sm:text-base cursor-pointer appearance-none"
                     required
                   >
-                    <option value={1}>Style 1</option>
-                    <option value={2}>Style 2</option>
-                    <option value={3}>Style 3</option>
-                    <option value={4}>Style 4</option>
-                    <option value={5}>Style 5</option>
-                    <option value={6}>Style 6</option>
+                    <option value={1} className="bg-slate-900 text-white py-2">Style 1</option>
+                    <option value={2} className="bg-slate-900 text-white py-2">Style 2</option>
+                    <option value={3} className="bg-slate-900 text-white py-2">Style 3</option>
+                    <option value={4} className="bg-slate-900 text-white py-2">Style 4</option>
+                    <option value={5} className="bg-slate-900 text-white py-2">Style 5</option>
+                    <option value={6} className="bg-slate-900 text-white py-2">Style 6</option>
                   </select>
+
+                  {/* Custom dropdown arrow */}
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 sm:pr-4 pointer-events-none">
+                      <svg 
+                        className="w-4 h-4 sm:w-5 sm:h-5 text-slate-400" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                      >
+                        <path 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round" 
+                          strokeWidth={2} 
+                          d="M19 9l-7 7-7-7" 
+                        />
+                      </svg>
+                    </div>
+                    <p className="text-slate-500 text-xs mt-2 mb-1 sm:mb-2">
+                    Choose the handwriting style that's closest to yours for more authentic results
+                  </p>
+                  </div>
                   {/* Style Preview */}
                     <motion.div
                       initial={{ opacity: 0, y: 10 }}
