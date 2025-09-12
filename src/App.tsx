@@ -257,7 +257,7 @@ function App() {
               Not backed by
             </span>
             <img
-              src="/src/assets/y-combinator-seeklogo.svg"
+              src="/y-combinator-seeklogo.svg"
               alt="Y Combinator"
               className="h-4 sm:h-5 w-auto"
             />
@@ -466,7 +466,7 @@ function App() {
                     onClick={addTopic}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    className="flex items-center gap-2 px-3 py-2 bg-violet-600/20 border border-violet-500/30 text-violet-300 rounded-lg text-sm font-semibold hover:bg-violet-600/30 transition-all"
+                    className="flex items-center gap-2 px-3 py-2 bg-violet-600/20 border border-violet-500/30 text-violet-300 rounded-lg text-sm font-semibold hover:bg-violet-600/30 transition-all cursor-pointer"
                   >
                     <Plus className="w-4 h-4" />
                     Add Topic
@@ -503,7 +503,7 @@ function App() {
                           onClick={() => removeTopic(index)}
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
-                          className="mt-8 p-2 bg-red-600/20 border border-red-500/30 text-red-300 rounded-lg hover:bg-red-600/30 transition-all"
+                          className="mt-7 p-2 bg-red-600/20 border border-red-500/30 text-red-300 rounded-lg hover:bg-red-600/30 transition-all cursor-pointer"
                         >
                           <Trash2 className="w-4 h-4" />
                         </motion.button>
