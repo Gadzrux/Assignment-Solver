@@ -1,6 +1,5 @@
 @import "tailwindcss";
 
-
 /* Custom animations and styles */
 @keyframes float {
   0%, 100% { transform: translateY(0px); }
@@ -11,23 +10,28 @@
   animation: float 3s ease-in-out infinite;
 }
 
-/* Custom scrollbar */
+/* Hide scrollbar completely */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 0px;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 10px;
+  display: none;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(45deg, #667eea, #764ba2);
-  border-radius: 10px;
+  display: none;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(45deg, #764ba2, #667eea);
+/* For Firefox */
+* {
+  scrollbar-width: none;
+}
+
+/* For older IE */
+body {
+  -ms-overflow-style: none;
 }
 
 /* Focus styles */
