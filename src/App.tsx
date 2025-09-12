@@ -8,6 +8,8 @@ import {
   Zap,
   Plus,
   Trash2,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -20,6 +22,7 @@ interface FormData {
   subjectCode: string;
   topics: string[];
   handwritingId: number;
+  outputFilename: string;
 }
 
 function App() {
@@ -30,8 +33,9 @@ function App() {
     subjectName: "",
     subjectCode: "",
     topics: [""],
-    handwritingId: 1,
-    geminiApiKey: import.meta.env.VITE_GEMINI_API_KEY || "",
+    handwritingId: 4,
+    geminiApiKey: "",
+    outputFilename: "",
   });
 
   const [isGenerating, setIsGenerating] = useState(false);
@@ -40,6 +44,11 @@ function App() {
   );
   const [error, setError] = useState<string | null>(null);
   const [isPdfContent, setIsPdfContent] = useState(false);
+  const [showApiKey, setShowApiKey] = useState(false);
+
+  const toggleApiKeyVisibility = () => {
+    setShowApiKey(!showApiKey);
+  };
 
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -98,6 +107,16 @@ function App() {
       return;
     }
 
+    // Get API key from form data or environment variable
+    const apiKey = formData.geminiApiKey.trim() || import.meta.env.VITE_GEMINI_API_KEY || "";
+
+    // Check if API key is available
+    if (!apiKey) {
+      setError("Gemini API key is required. Please enter your API key or configure it in environment variables.");
+      setIsGenerating(false);
+      return;
+    }
+
     try {
       const requestBody = {
         name: formData.name,
@@ -106,10 +125,8 @@ function App() {
         subject_name: formData.subjectName,
         subject_code: formData.subjectCode,
         topics: validTopics,
-        output_filename: `${
-          formData.universityRoll
-        }_${formData.subjectCode.replace(/\s+/g, "")}`,
-        gemini_api_key: formData.geminiApiKey || "",
+        output_filename: formData.outputFilename || `${formData.universityRoll}_${formData.subjectCode.replace(/\s+/g, "")}`,
+        gemini_api_key: apiKey,
         handwriting_id: formData.handwritingId,
       };
 
@@ -188,7 +205,8 @@ function App() {
       subjectCode: "",
       topics: [""],
       handwritingId: 1,
-      geminiApiKey: import.meta.env.VITE_GEMINI_API_KEY || "",
+      geminiApiKey: "",
+      outputFilename: "",
     });
     setGeneratedImageUrl(null);
     setError(null);
@@ -200,12 +218,11 @@ function App() {
       const link = document.createElement("a");
       link.href = generatedImageUrl;
 
-      // Use the isPdfContent state instead of URL detection
+      // Use custom filename if provided, otherwise use default
       const extension = isPdfContent ? "pdf" : "png";
-      const fileName = `${formData.name.replace(
-        /\s+/g,
-        "_"
-      )}_${formData.topics[0]?.replace(/\s+/g, "_")}_assignment.${extension}`;
+      const fileName = formData.outputFilename 
+        ? `${formData.outputFilename}.${extension}`
+        : `${formData.name.replace(/\s+/g, "_")}_${formData.topics[0]?.replace(/\s+/g, "_")}_assignment.${extension}`;
 
       link.download = fileName;
       document.body.appendChild(link);
@@ -270,7 +287,7 @@ function App() {
             className="max-w-5xl mx-auto space-y-4 sm:space-y-6 px-2"
           >
             <p className="text-lg sm:text-2xl md:text-3xl text-white font-bold leading-relaxed">
-              Transform your typed text into{" "}
+              Generate{" "}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-indigo-400 font-black">
                 realistic handwritten documents
               </span>{" "}
@@ -427,6 +444,22 @@ function App() {
                     />
                   </div>
                 </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-300 mb-2 sm:mb-3">
+                    Output File Name
+                  </label>
+                  <input
+                    type="text"
+                    name="outputFilename"
+                    value={formData.outputFilename}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 sm:px-5 sm:py-4 bg-slate-800/50 backdrop-blur-sm border border-slate-600/50 rounded-xl sm:rounded-2xl text-white placeholder-slate-500 focus:border-cyan-400/60 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 transition-all text-sm sm:text-base"
+                    placeholder="my_assignment (extension will be added automatically)"
+                  />
+                  <p className="text-slate-500 text-xs mt-2">
+                    Optional - Leave blank to use default naming (University Roll + Subject Code)
+                  </p>
+                </div>
 
                 <div>
                   <label className="block text-sm font-semibold text-slate-300 mb-2 sm:mb-3">
@@ -447,6 +480,36 @@ function App() {
                     <option value={5}>Style 5</option>
                     <option value={6}>Style 6</option>
                   </select>
+                  {/* Style Preview */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="mt-4 bg-slate-800/30 backdrop-blur-sm border border-slate-600/30 rounded-xl p-4 overflow-hidden"
+                    >
+                      <p className="text-slate-300 text-sm font-medium mb-3">
+                        Preview of Style {formData.handwritingId}:
+                      </p>
+                      <div className="flex justify-center">
+                        <img
+                          src={`/style${formData.handwritingId}.png`}
+                          alt={`Handwriting Style ${formData.handwritingId} Preview`}
+                          className="max-w-full h-auto rounded-lg shadow-lg border border-slate-600/20 max-h-48"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            const nextElement = e.currentTarget.nextElementSibling as HTMLElement;
+                            if (nextElement) {
+                              nextElement.style.display = 'block';
+                            }
+                          }}
+                        />
+                        <div 
+                          className="hidden text-slate-500 text-center py-8"
+                        >
+                          <p>Preview not available</p>
+                        </div>
+                      </div>
+                    </motion.div>
                 </div>
               </motion.div>
 
@@ -510,6 +573,81 @@ function App() {
                       )}
                     </motion.div>
                   ))}
+                </div>
+              </motion.div>
+
+              {/* Gemini API Key */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7, duration: 0.6 }}
+                className="space-y-4 sm:space-y-6"
+              >
+                <h3 className="text-base sm:text-lg font-bold text-orange-300 uppercase tracking-wider">
+                  AI Configuration
+                </h3>
+
+                <div>
+                  <label className="block text-sm font-semibold text-slate-300 mb-2 sm:mb-3">
+                    Gemini API Key
+                  </label>
+                  <div className="relative">
+                  <input
+                    type={showApiKey ? "text" : "password"}
+                    name="geminiApiKey"
+                    value={formData.geminiApiKey}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 sm:px-5 sm:py-4 bg-slate-800/50 backdrop-blur-sm border border-slate-600/50 rounded-xl sm:rounded-2xl text-white placeholder-slate-500 focus:border-orange-400/60 focus:outline-none focus:ring-2 focus:ring-orange-400/20 transition-all text-sm sm:text-base"
+                    placeholder="Enter your Gemini API key (optional if configured)"
+                  />
+                  <motion.button
+                      type="button"
+                      onClick={toggleApiKeyVisibility}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="absolute right-3 sm:right-4 top-1/2 transform -translate-y-1/2 p-2 text-slate-400 hover:text-orange-400 transition-colors rounded-lg hover:bg-slate-700/30 cursor-pointer"
+                      title={showApiKey ? "Hide API key" : "Show API key"}
+                    >
+                      {showApiKey ? (
+                        <EyeOff className="w-4 h-4 sm:w-5 sm:h-5" />
+                      ) : (
+                        <Eye className="w-4 h-4 sm:w-5 sm:h-5" />
+                      )}
+                    </motion.button>
+                  </div>
+                  
+                  {/* Tutorial Message */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                    className="mt-3 bg-gradient-to-r from-orange-900/20 to-amber-900/20 backdrop-blur-sm border border-orange-500/20 rounded-xl p-4"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 w-6 h-6 rounded-full bg-orange-500/20 flex items-center justify-center mt-0.5">
+                        <span className="text-orange-400 text-sm font-bold">?</span>
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-orange-200 text-sm font-medium">
+                          Don't have an API key?
+                        </p>
+                        <div className="text-slate-300 text-xs space-y-1">
+                          <p>1. Visit <a 
+                            href="https://aistudio.google.com/app/apikey" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-orange-400 hover:text-orange-300 underline font-medium transition-colors"
+                          >Google AI Studio</a></p>
+                          <p>2. Sign in with your Google account</p>
+                          <p>3. Click "Create API Key" button</p>
+                          <p>4. Copy and paste the key above</p>
+                        </div>
+                        <p className="text-slate-400 text-xs mt-2">
+                          <strong>Note:</strong> API key is optional if already configured in environment. Your key is never stored and only used for this session.
+                        </p>
+                      </div>
+                    </div>
+                  </motion.div>
                 </div>
               </motion.div>
 
