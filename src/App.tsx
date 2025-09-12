@@ -437,7 +437,7 @@ function App() {
                     value={formData.handwritingId}
                     onChange={handleInputChange}
                     title="Select handwriting style"
-                    className="w-full px-4 py-3 sm:px-5 sm:py-4 bg-slate-800/50 backdrop-blur-sm border border-slate-600/50 rounded-xl sm:rounded-2xl text-white focus:border-cyan-400/60 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 transition-all text-sm sm:text-base"
+                    className="w-full px-4 py-3 sm:px-5 sm:py-4 bg-slate-800/50 backdrop-blur-sm border border-slate-600/50 rounded-xl sm:rounded-2xl text-white focus:border-cyan-400/60 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 transition-all text-sm sm:text-base cursor-pointer"
                     required
                   >
                     <option value={1}>Style 1</option>
