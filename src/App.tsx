@@ -238,7 +238,7 @@ function App() {
           >
             <h1 className="text-3xl sm:text-5xl md:text-7xl font-black text-white tracking-tight mb-2">
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-cyan-400 to-violet-400">
-                F*ck
+                Generate
               </span>{" "}
               <span className="text-slate-300 block sm:inline">
                 Handwritten Assignments
